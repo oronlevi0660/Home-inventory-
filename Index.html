@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ניהול מלאי מחסן</title>
+  <!-- PWA Manifest for standalone view -->
+  <link rel="manifest" href="data:application/json,{%22name%22:%22ניהול%20מלאי%20מחסן%22,%22short_name%22:%22מלאי%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23f4f6f9%22,%22theme_color%22:%22%234f46e5%22}">
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #f4f6f9; margin: 0; padding: 15px; direction: rtl; color: #333; }
+    .container { max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #4f46e5; margin-top: 0; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    button { width: 100%; background: #4f46e5; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:active { background: #4338ca; }
+    .item-list { margin-top: 20px; }
+    .item-card { display: flex; justify-content: space-between; align-items: center; background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-right: 5px solid #4f46e5; }
+    .item-card.low { border-right-color: #ef4444; background: #fef2f2; }
+    .controls { display: flex; gap: 8px; align-items: center; }
+    .btn-qty { background: #e5e7eb; color: #1f2937; width: 32px; height: 32px; border-radius: 6px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .btn-delete { background: #fee2e2; color: #ef4444; width: 32px; height: 32px; border-radius: 6px; padding: 0; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📦 ניהול מלאי מחסן</h1>
+    <div class="form-group">
+      <label>שם המוצר:</label>
+      <input type="text" id="itemName" placeholder="למשל: אבקת כביסה">
+    </div>
+    <div class="form-group">
+      <label>קטגוריה:</label>
+      <select id="itemCat">
+        <option value="חומרי ניקוי">חומרי ניקוי</option>
+        <option value="טואלטיקה ורחצה">טואלטיקה ורחצה</option>
+        <option value="כללי">כללי</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>כמות קיימת:</label>
+      <input type="number" id="itemQty" value="1" min="0">
+    </div>
+    <div class="form-group">
+      <label>התראת מלאי נמוך מ-:</label>
+      <input type="number" id="itemMin" value="2" min="1">
+    </div>
+    <button onclick="addItem()">הוסף למלאי</button>
+
+    <div class="item-list" id="itemList"></div>
+  </div>
+
+  <script>
+    let inventory = JSON.parse(localStorage.getItem('home_inventory')) || [];
+
+    function save() {
+      localStorage.setItem('home_inventory', JSON.stringify(inventory));
+      render();
+    }
+
+    function addItem() {
+      const name = document.getElementById('itemName').value.trim();
+      const category = document.getElementById('itemCat').value;
+      const qty = parseInt(document.getElementById('itemQty').value) || 0;
+      const min = parseInt(document.getElementById('itemMin').value) || 2;
+
+      if (!name) return alert('נא להזין שם מוצר');
+
+      inventory.push({ id: Date.now(), name, category, qty, min });
+      document.getElementById('itemName').value = '';
+      save();
+    }
+
+    function updateQty(id, change) {
+      const item = inventory.find(i => i.id === id);
+      if (item) {
+        item.qty = Math.max(0, item.qty + change);
+        save();
+      }
+    }
+
+    function removeItem(id) {
+      inventory = inventory.filter(i => i.id !== id);
+      save();
+    }
+
+    function render() {
+      const list = document.getElementById('itemList');
+      list.innerHTML = '';
+
+      inventory.forEach(item => {
+        const isLow = item.qty <= item.min;
+        const card = document.createElement('div');
+        card.className = `item-card ${isLow ? 'low' : ''}`;
+        card.innerHTML = `
+          <div>
+            <strong>${item.name}</strong> <small>(${item.category})</small>
+            ${isLow ? '<br><small style="color:red;font-weight:bold;">אזל / מלאי נמוך!</small>' : ''}
+          </div>
+          <div class="controls">
+            <button class="btn-qty" onclick="updateQty(${item.id}, -1)">-</button>
+            <span><strong>${item.qty}</strong></span>
+            <button class="btn-qty" onclick="updateQty(${item.id}, 1)">+</button>
+            <button class="btn-delete" onclick="removeItem(${item.id})">🗑️</button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
