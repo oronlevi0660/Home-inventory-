@@ -195,4 +195,261 @@
         }
 
         .form-group input, .form-group select {
-            width: 100
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #95a5a6; color: white; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="header-add-btn" onclick="openAddModal()">+</button>
+        <h1>מלאי ציוד ניקיון ופארם</h1>
+        <span class="status-badge" id="syncStatus">מסונכרן</span>
+    </header>
+
+    <div id="inventoryContainer">טוען נתונים...</div>
+
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">הוספת מוצר חדש</h3>
+            <input type="hidden" id="editItemId">
+            <div class="form-group">
+                <label>שם המוצר</label>
+                <input type="text" id="itemName" placeholder="למשל: אקונומיקה">
+            </div>
+            <div class="form-group">
+                <label>קטגוריה</label>
+                <select id="itemCategory">
+                    <option value="חומרי ניקוי">חומרי ניקוי</option>
+                    <option value="מוצרי פארם וטואלטיקה">מוצרי פארם וטואלטיקה</option>
+                    <option value="כביסה">כביסה</option>
+                    <option value="כללי ומתכלים">כללי ומתכלים</option>
+                </select>
+            </div>
+            <div class="form-group" id="qtyGroup">
+                <label>כמות נוכחית</label>
+                <input type="number" id="itemQty" value="1" min="0">
+            </div>
+            <div class="form-group">
+                <label>כמות מינימום להתראה</label>
+                <input type="number" id="itemMinQty" value="1" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-action btn-cancel" onclick="closeModal()">ביטול</button>
+                <button class="btn-action btn-save" onclick="saveItem()">שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
+          authDomain: "home-inventory-6d54b.firebaseapp.com",
+          databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
+          projectId: "home-inventory-6d54b",
+          storageBucket: "home-inventory-6d54b.firebasestorage.app",
+          messagingSenderId: "486810614390",
+          appId: "1:486810614390:web:9212c9141897028a9f3d57",
+          measurementId: "G-FLZVWLP90C"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const inventoryRef = ref(db, 'inventory');
+
+        let itemsData = [];
+
+        const defaultList = [
+            { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 102, name: "נוזל כלים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 103, name: "ספריי חלונות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 104, name: "ספריי מסיר שומנים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 105, name: "חומר לניקוי אסלות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 106, name: "אקונומיקה", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 107, name: "מטליות מיקרופייבר", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+
+            { id: 201, name: "נייר טואלט", category: "מוצרי פארם וטואלטיקה", qty: 2, minQty: 1 },
+            { id: 202, name: "סבון גוף נוזלי", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 203, name: "שמפו", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 204, name: "מרכך שיער", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 205, name: "סבון ידיים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 206, name: "סבון פנים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 207, name: "משחת שיניים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 208, name: "דאודורנט", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+
+            { id: 301, name: "ג'ל / אבקת כביסה", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 302, name: "מרכך כביסה", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 303, name: "קפסולות כביסה", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 304, name: "דפי יבשן / מפיצי ריח", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 305, name: "מסיר כתמים", category: "כביסה", qty: 1, minQty: 1 },
+
+            { id: 401, name: "שקיות זבל", category: "כללי ומתכלים", qty: 3, minQty: 1 },
+            { id: 402, name: "נייר סופג / מגבוני מטבח", category: "כללי ומתכלים", qty: 1, minQty: 1 },
+            { id: 403, name: "ספוגים לכלים / סקוטש", category: "כללי ומתכלים", qty: 1, minQty: 1 },
+            { id: 404, name: "נייר אלומיניום / ניילון נצמד", category: "כללי ומתכלים", qty: 1, minQty: 1 },
+            { id: 405, name: "שקיות אוכל / זיפלוק", category: "כללי ומתכלים", qty: 1, minQty: 1 }
+        ];
+
+        onValue(inventoryRef, (snapshot) => {
+            const raw = snapshot.val();
+            if (raw) {
+                if (Array.isArray(raw)) {
+                    itemsData = raw.filter(x => x !== null && x !== undefined);
+                } else if (typeof raw === 'object') {
+                    itemsData = Object.values(raw).filter(x => x !== null && x !== undefined);
+                }
+            }
+            
+            if (itemsData.length === 0) {
+                itemsData = defaultList;
+                set(inventoryRef, defaultList);
+            }
+            
+            renderInventory();
+        }, (error) => {
+            console.error(error);
+            itemsData = defaultList;
+            renderInventory();
+        });
+
+        function saveToCloud() {
+            set(inventoryRef, itemsData);
+        }
+
+        window.updateQty = function(id, delta) {
+            const item = itemsData.find(i => i.id === id);
+            if (item) {
+                item.qty = Math.max(0, item.qty + delta);
+                saveToCloud();
+            }
+        };
+
+        window.openAddModal = function() {
+            document.getElementById('modalTitle').innerText = 'הוספת מוצר חדש';
+            document.getElementById('editItemId').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemQty').value = '1';
+            document.getElementById('itemMinQty').value = '1';
+            document.getElementById('qtyGroup').style.display = 'block';
+            document.getElementById('itemModal').style.display = 'flex';
+        };
+
+        window.openEditModal = function(id) {
+            const item = itemsData.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('modalTitle').innerText = 'עריכת מוצר';
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemMinQty').value = item.minQty;
+            document.getElementById('qtyGroup').style.display = 'none';
+            document.getElementById('itemModal').style.display = 'flex';
+        };
+
+        window.closeModal = function() {
+            document.getElementById('itemModal').style.display = 'none';
+        };
+
+        window.saveItem = function() {
+            const editId = document.getElementById('editItemId').value;
+            const name = document.getElementById('itemName').value.trim();
+            const category = document.getElementById('itemCategory').value;
+            const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
+
+            if (!name) return alert('נא להזין שם מוצר');
+
+            if (editId) {
+                const item = itemsData.find(i => i.id == editId);
+                if (item) {
+                    item.name = name;
+                    item.category = category;
+                    item.minQty = minQty;
+                }
+            } else {
+                const qty = parseInt(document.getElementById('itemQty').value) || 0;
+                const newItem = {
+                    id: Date.now(),
+                    name,
+                    category,
+                    qty,
+                    minQty
+                };
+                itemsData.push(newItem);
+            }
+
+            saveToCloud();
+            closeModal();
+        };
+
+        function renderInventory() {
+            const container = document.getElementById('inventoryContainer');
+            container.innerHTML = '';
+
+            const categories = {};
+            itemsData.forEach(item => {
+                if (!categories[item.category]) categories[item.category] = [];
+                categories[item.category].push(item);
+            });
+
+            for (const [catName, items] of Object.entries(categories)) {
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                
+                let itemsHtml = '';
+                items.forEach(item => {
+                    const isLow = item.qty <= item.minQty;
+                    itemsHtml += `
+                        <div class="item-row">
+                            <div class="item-info">
+                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
+                                <div>
+                                    <div class="item-name">${item.name}</div>
+                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
+                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="counter-controls">
+                                <button class="btn-qty" onclick="updateQty(${item.id}, -1)">-</button>
+                                <span class="qty-display">${item.qty}</span>
+                                <button class="btn-qty" onclick="updateQty(${item.id}, 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="category-title">
+                        <span>${catName}</span>
+                    </div>
+                    ${itemsHtml}
+                `;
+                container.appendChild(card);
+            }
+        }
+    </script>
+</body>
+</html>
