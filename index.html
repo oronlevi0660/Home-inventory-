@@ -197,6 +197,13 @@
             margin-top: 2px;
         }
 
+        .item-note {
+            font-size: 0.78rem;
+            color: #d35400;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
         .low-stock {
             color: #e74c3c;
             font-weight: bold;
@@ -262,11 +269,12 @@
             margin-bottom: 4px;
         }
 
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 6px;
+            font-size: 0.9rem;
         }
 
         .modal-actions {
@@ -336,6 +344,10 @@
                 <label>כמות מינימום להתראה</label>
                 <input type="number" id="itemMinQty" value="1" min="0">
             </div>
+            <div class="form-group">
+                <label>הערה (למשל: רבע קופסה נשארה)</label>
+                <textarea id="itemNote" rows="2" placeholder="הערה חופשית על מצב המוצר..."></textarea>
+            </div>
             <div class="modal-actions">
                 <button class="btn-action btn-delete" id="deleteBtn" onclick="deleteItem()">מחק מוצר</button>
                 <div class="modal-right-actions">
@@ -348,34 +360,8 @@
 
     <script>
         const defaultList = [
-            { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-            { id: 102, name: "נוזל כלים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-            { id: 103, name: "ספריי חלונות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-            { id: 104, name: "ספריי מסיר שומנים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-            { id: 105, name: "חומר לניקוי אסלות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-            { id: 106, name: "אקונומיקה", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-            { id: 107, name: "מטליות מיקרופייבר", category: "חומרי ניקוי", qty: 1, minQty: 1 },
-
-            { id: 201, name: "נייר טואלט", category: "מוצרי פארם וטואלטיקה", qty: 2, minQty: 1 },
-            { id: 202, name: "סבון גוף נוזלי", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-            { id: 203, name: "שמפו", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-            { id: 204, name: "מרכך שיער", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-            { id: 205, name: "סבון ידיים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-            { id: 206, name: "סבון פנים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-            { id: 207, name: "משחת שיניים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-            { id: 208, name: "דאודורנט", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
-
-            { id: 301, name: "ג'ל / אבקת כביסה", category: "כביסה", qty: 1, minQty: 1 },
-            { id: 302, name: "מרכך כביסה", category: "כביסה", qty: 1, minQty: 1 },
-            { id: 303, name: "קפסולות כביסה", category: "כביסה", qty: 1, minQty: 1 },
-            { id: 304, name: "דפי יבשן / מפיצי ריח", category: "כביסה", qty: 1, minQty: 1 },
-            { id: 305, name: "מסיר כתמים", category: "כביסה", qty: 1, minQty: 1 },
-
-            { id: 401, name: "שקיות זבל", category: "כללי ומתכלים", qty: 3, minQty: 1 },
-            { id: 402, name: "נייר סופג / מגבוני מטבח", category: "כללי ומתכלים", qty: 1, minQty: 1 },
-            { id: 403, name: "ספוגים לכלים / סקוטש", category: "כללי ומתכלים", qty: 1, minQty: 1 },
-            { id: 404, name: "נייר אלומיניום / ניילון נצמד", category: "כללי ומתכלים", qty: 1, minQty: 1 },
-            { id: 405, name: "שקיות אוכל / זיפלוק", category: "כללי ומתכלים", qty: 1, minQty: 1 }
+            { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1, note: "" },
+            { id: 102, name: "נוזל כלים", category: "חומרי ניקוי", qty: 1, minQty: 1, note: "" }
         ];
 
         let itemsData = defaultList;
@@ -383,7 +369,6 @@
         let searchQuery = '';
         let collapsedCategories = {};
 
-        // גיבוי מקומי מיידי למניעת מסך לבן בזמן טעינה
         try {
             const localSaved = localStorage.getItem('home_inventory_safe_cache');
             if (localSaved) {
@@ -418,7 +403,7 @@
 
             let text = "🛒 *רשימת קניות לבית:* \n\n";
             lowStockItems.forEach(item => {
-                text += `• ${item.name} (כמות נוכחית: ${item.qty})\n`;
+                text += `• ${item.name} (כמות: ${item.qty})${item.note ? ' - הערה: ' + item.note : ''}\n`;
             });
 
             const encodedText = encodeURIComponent(text);
@@ -455,6 +440,7 @@
             document.getElementById('newCategoryInput').value = '';
             document.getElementById('itemQty').value = '1';
             document.getElementById('itemMinQty').value = '1';
+            document.getElementById('itemNote').value = '';
             document.getElementById('qtyGroup').style.display = 'block';
             document.getElementById('deleteBtn').style.display = 'none';
             updateCategorySelect();
@@ -469,6 +455,7 @@
             document.getElementById('itemName').value = item.name;
             document.getElementById('newCategoryInput').value = '';
             document.getElementById('itemMinQty').value = item.minQty;
+            document.getElementById('itemNote').value = item.note || '';
             document.getElementById('qtyGroup').style.display = 'none';
             document.getElementById('deleteBtn').style.display = 'block';
             updateCategorySelect(item.category);
@@ -483,6 +470,7 @@
             const newCatInput = document.getElementById('newCategoryInput').value.trim();
             const category = newCatInput ? newCatInput : document.getElementById('itemCategory').value;
             const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
+            const note = document.getElementById('itemNote').value.trim();
 
             if (!name) return alert('נא להזין שם מוצר');
 
@@ -492,10 +480,11 @@
                     item.name = name;
                     item.category = category;
                     item.minQty = minQty;
+                    item.note = note;
                 }
             } else {
                 const qty = parseInt(document.getElementById('itemQty').value) || 0;
-                itemsData.push({ id: Date.now(), name, category, qty, minQty });
+                itemsData.push({ id: Date.now(), name, category, qty, minQty, note });
             }
 
             renderApp();
@@ -546,7 +535,7 @@
             container.innerHTML = '';
 
             let filteredItems = itemsData.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || (item.note && item.note.toLowerCase().includes(searchQuery));
                 let matchesCategory = true;
                 if (selectedCategoryFilter === 'LOW_STOCK') {
                     matchesCategory = item.qty <= item.minQty;
@@ -586,6 +575,7 @@
                                     <div class="item-status ${isLow ? 'low-stock' : ''}">
                                         ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
                                     </div>
+                                    ${item.note ? `<div class="item-note">💬 ${item.note}</div>` : ''}
                                 </div>
                             </div>
                             <div class="counter-controls">
@@ -652,7 +642,11 @@
                         if (raw) {
                             let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
                             if (arr.length > 0) {
-                                itemsData = arr;
+                                // שומר על הנתונים הקיימים שלך ומעדכן מהענן בצורה חלקה
+                                itemsData = arr.map(item => ({
+                                    ...item,
+                                    note: item.note || ''
+                                }));
                                 localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
                                 renderApp();
                                 document.getElementById('syncStatus').innerText = 'מסונכרן';
