@@ -4,78 +4,679 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ניהול מלאי הבית</title>
+    <meta name="theme-color" content="#2c3e50">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background-color: #f4f6f9; color: #333; padding: 15px; }
-        header { background-color: #2c3e50; color: white; padding: 15px; text-align: center; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        h1 { font-size: 1.1rem; }
-        .btn { background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 1rem; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .title { font-weight: bold; color: #2c3e50; margin-bottom: 10px; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; }
-        .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-        .controls { display: flex; align-items: center; gap: 8px; }
-        .qty-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: #e3e8ef; font-weight: bold; cursor: pointer; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 15px;
+            padding-bottom: 40px;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1rem;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 4px 6px;
+            border-radius: 10px;
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .header-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .whatsapp-btn {
+            background-color: #25D366;
+            color: white;
+            border-radius: 20px;
+            padding: 0 10px;
+            width: auto;
+            font-size: 0.8rem;
+            font-weight: bold;
+            height: 36px;
+        }
+
+        .search-container {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+
+        .category-filters {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            scrollbar-width: none;
+        }
+
+        .category-filters::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filter-chip {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            cursor: pointer;
+            color: #475569;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .filter-chip.active {
+            background-color: #2c3e50;
+            color: white;
+            border-color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .filter-chip.low-stock-chip {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .filter-chip.low-stock-chip.active {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .category-title {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-card.collapsed .item-list-container {
+            display: none;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-edit {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .item-status {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 2px;
+        }
+
+        .low-stock {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-qty {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background-color: #e3e8ef;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .qty-display {
+            font-weight: bold;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .modal-right-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #95a5a6; color: white; }
+        .btn-delete { background: #e74c3c; color: white; display: none; }
     </style>
 </head>
 <body>
 
     <header>
-        <button class="btn" onclick="resetData()">איפוס</button>
-        <h1>ניהול מלאי ביתי</h1>
-        <span style="font-size:0.8rem; background:#27ae60; padding:3px 8px; border-radius:8px;">יציב</span>
+        <div class="header-actions">
+            <button class="header-btn" onclick="openAddModal()">+</button>
+            <button class="header-btn whatsapp-btn" onclick="shareToWhatsApp()">📲 שרשור קניות</button>
+        </div>
+        <h1>מלאי ציוד ניקיון ופארם</h1>
+        <span class="status-badge" id="syncStatus">מוכן</span>
     </header>
 
-    <div id="app"></div>
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 חפש מוצר..." oninput="handleSearch()">
+    </div>
+
+    <div class="category-filters" id="categoryFiltersContainer"></div>
+
+    <div id="inventoryContainer"></div>
+
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">הוספת מוצר חדש</h3>
+            <input type="hidden" id="editItemId">
+            <div class="form-group">
+                <label>שם המוצר</label>
+                <input type="text" id="itemName" placeholder="למשל: אקונומיקה">
+            </div>
+            <div class="form-group">
+                <label>קטגוריה</label>
+                <select id="itemCategory"></select>
+            </div>
+            <div class="form-group">
+                <label>או הוסף קטגוריה חדשה:</label>
+                <input type="text" id="newCategoryInput" placeholder="שם קטגוריה חדשה (אופציונלי)">
+            </div>
+            <div class="form-group" id="qtyGroup">
+                <label>כמות נוכחית</label>
+                <input type="number" id="itemQty" value="1" min="0">
+            </div>
+            <div class="form-group">
+                <label>כמות מינימום להתראה</label>
+                <input type="number" id="itemMinQty" value="1" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-action btn-delete" id="deleteBtn" onclick="deleteItem()">מחק מוצר</button>
+                <div class="modal-right-actions">
+                    <button class="btn-action btn-cancel" onclick="closeModal()">ביטול</button>
+                    <button class="btn-action btn-save" onclick="saveItem()">שמור</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const initialData = [
-            { id: 1, name: "אקונומיקה", category: "ניקיון", qty: 2 },
-            { id: 2, name: "נייר טואלט", category: "פארם", qty: 3 }
+        const defaultList = [
+            { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 102, name: "נוזל כלים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 103, name: "ספריי חלונות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 104, name: "ספריי מסיר שומנים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 105, name: "חומר לניקוי אסלות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 106, name: "אקונומיקה", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+            { id: 107, name: "מטליות מיקרופייבר", category: "חומרי ניקוי", qty: 1, minQty: 1 },
+
+            { id: 201, name: "נייר טואלט", category: "מוצרי פארם וטואלטיקה", qty: 2, minQty: 1 },
+            { id: 202, name: "סבון גוף נוזלי", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 203, name: "שמפו", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 204, name: "מרכך שיער", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 205, name: "סבון ידיים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 206, name: "סבון פנים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 207, name: "משחת שיניים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+            { id: 208, name: "דאודורנט", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
+
+            { id: 301, name: "ג'ל / אבקת כביסה", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 302, name: "מרכך כביסה", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 303, name: "קפסולות כביסה", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 304, name: "דפי יבשן / מפיצי ריח", category: "כביסה", qty: 1, minQty: 1 },
+            { id: 305, name: "מסיר כתמים", category: "כביסה", qty: 1, minQty: 1 },
+
+            { id: 401, name: "שקיות זבל", category: "כללי ומתכלים", qty: 3, minQty: 1 },
+            { id: 402, name: "נייר סופג / מגבוני מטבח", category: "כללי ומתכלים", qty: 1, minQty: 1 },
+            { id: 403, name: "ספוגים לכלים / סקוטש", category: "כללי ומתכלים", qty: 1, minQty: 1 },
+            { id: 404, name: "נייר אלומיניום / ניילון נצמד", category: "כללי ומתכלים", qty: 1, minQty: 1 },
+            { id: 405, name: "שקיות אוכל / זיפלוק", category: "כללי ומתכלים", qty: 1, minQty: 1 }
         ];
 
-        let data = initialData;
+        let itemsData = defaultList;
+        let selectedCategoryFilter = 'ALL';
+        let searchQuery = '';
+        let collapsedCategories = {};
+
         try {
-            const saved = localStorage.getItem('inv_data_v1');
-            if (saved) data = JSON.parse(saved);
-        } catch(e) {
+            const localSaved = localStorage.getItem('home_inventory_safe_cache');
+            if (localSaved) {
+                const parsed = JSON.parse(localSaved);
+                if (Array.isArray(parsed) && parsed.length > 0) itemsData = parsed;
+            }
+        } catch (e) {
             console.error(e);
+            localStorage.removeItem('home_inventory_safe_cache');
         }
 
-        function render() {
-            const app = document.getElementById('app');
-            app.innerHTML = '';
-            
+        function renderApp() {
+            try {
+                renderFilters();
+                renderInventory();
+            } catch (err) {
+                console.error("Render error", err);
+            }
+        }
+
+        renderApp();
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                      apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
+                      authDomain: "home-inventory-6d54b.firebaseapp.com",
+                      databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
+                      projectId: "home-inventory-6d54b",
+                      storageBucket: "home-inventory-6d54b.firebasestorage.app",
+                      messagingSenderId: "486810614390",
+                      appId: "1:486810614390:web:9212c9141897028a9f3d57",
+                      measurementId: "G-FLZVWLP90C"
+                    };
+
+                    firebase.initializeApp(firebaseConfig);
+                    const db = firebase.database();
+                    const inventoryRef = db.ref('inventory');
+
+                    inventoryRef.on('value', (snapshot) => {
+                        const raw = snapshot.val();
+                        if (raw) {
+                            let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
+                            if (arr.length > 0) {
+                                itemsData = arr;
+                                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                                renderApp();
+                                document.getElementById('syncStatus').innerText = 'מסונכרן';
+                            }
+                        } else {
+                            inventoryRef.set(defaultList);
+                        }
+                    }, (err) => {
+                        document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+                    });
+
+                    window.syncToCloud = function() {
+                        try {
+                            localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                            inventoryRef.set(itemsData);
+                        } catch (e) { console.error(e); }
+                    };
+                }
+            } catch (err) {
+                document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+            }
+        });
+
+        if (!window.syncToCloud) {
+            window.syncToCloud = function() {
+                try {
+                    localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                } catch (e) { console.error(e); }
+            };
+        }
+
+        window.handleSearch = function() {
+            searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+            renderApp();
+        };
+
+        window.filterByCategory = function(cat) {
+            selectedCategoryFilter = cat;
+            renderApp();
+        };
+
+        window.toggleCatIndex = function(idx) {
+            collapsedCategories[idx] = !collapsedCategories[idx];
+            renderApp();
+        };
+
+        window.shareToWhatsApp = function() {
+            const lowStockItems = itemsData.filter(i => i.qty <= i.minQty);
+            if (lowStockItems.length === 0) {
+                alert("אין מוצרים בחוסר ברשימה! 🎉");
+                return;
+            }
+
+            let text = "🛒 *רשימת קניות לבית:* \n\n";
+            lowStockItems.forEach(item => {
+                text += `• ${item.name} (כמות נוכחית: ${item.qty})\n`;
+            });
+
+            const encodedText = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+        };
+
+        window.updateQty = function(id, delta) {
+            const item = itemsData.find(i => i.id === id);
+            if (item) {
+                item.qty = Math.max(0, item.qty + delta);
+                renderApp();
+                if (typeof window.syncToCloud === 'function') window.syncToCloud();
+            }
+        };
+
+        function updateCategorySelect(selectedCat = '') {
+            const select = document.getElementById('itemCategory');
+            select.innerHTML = '';
+            const categories = [...new Set(itemsData.map(i => i.category))];
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.innerText = cat;
+                if (cat === selectedCat) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        window.openAddModal = function() {
+            document.getElementById('modalTitle').innerText = 'הוספת מוצר חדש';
+            document.getElementById('editItemId').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('newCategoryInput').value = '';
+            document.getElementById('itemQty').value = '1';
+            document.getElementById('itemMinQty').value = '1';
+            document.getElementById('qtyGroup').style.display = 'block';
+            document.getElementById('deleteBtn').style.display = 'none';
+            updateCategorySelect();
+            document.getElementById('itemModal').style.display = 'flex';
+        };
+
+        window.openEditModal = function(id) {
+            const item = itemsData.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('modalTitle').innerText = 'עריכת מוצר';
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('newCategoryInput').value = '';
+            document.getElementById('itemMinQty').value = item.minQty;
+            document.getElementById('qtyGroup').style.display = 'none';
+            document.getElementById('deleteBtn').style.display = 'block';
+            updateCategorySelect(item.category);
+            document.getElementById('itemModal').style.display = 'flex';
+        };
+
+        window.closeModal = function() { document.getElementById('itemModal').style.display = 'none'; };
+
+        window.saveItem = function() {
+            const editId = document.getElementById('editItemId').value;
+            const name = document.getElementById('itemName').value.trim();
+            const newCatInput = document.getElementById('newCategoryInput').value.trim();
+            const category = newCatInput ? newCatInput : document.getElementById('itemCategory').value;
+            const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
+
+            if (!name) return alert('נא להזין שם מוצר');
+
+            if (editId) {
+                const item = itemsData.find(i => i.id == editId);
+                if (item) {
+                    item.name = name;
+                    item.category = category;
+                    item.minQty = minQty;
+                }
+            } else {
+                const qty = parseInt(document.getElementById('itemQty').value) || 0;
+                itemsData.push({ id: Date.now(), name, category, qty, minQty });
+            }
+
+            renderApp();
+            if (typeof window.syncToCloud === 'function') window.syncToCloud();
+            closeModal();
+        };
+
+        window.deleteItem = function() {
+            const editId = document.getElementById('editItemId').value;
+            if (editId && confirm('האם אתה בטוח שברצונך למחוק את המוצר?')) {
+                itemsData = itemsData.filter(i => i.id != editId);
+                renderApp();
+                if (typeof window.syncToCloud === 'function') window.syncToCloud();
+                closeModal();
+            }
+        };
+
+        function renderFilters() {
+            const container = document.getElementById('categoryFiltersContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            const categories = [...new Set(itemsData.map(i => i.category))];
+
+            const allChip = document.createElement('div');
+            allChip.className = `filter-chip ${selectedCategoryFilter === 'ALL' ? 'active' : ''}`;
+            allChip.innerText = 'הכל';
+            allChip.onclick = () => filterByCategory('ALL');
+            container.appendChild(allChip);
+
+            const lowChip = document.createElement('div');
+            lowChip.className = `filter-chip low-stock-chip ${selectedCategoryFilter === 'LOW_STOCK' ? 'active' : ''}`;
+            lowChip.innerText = '⚠️ חסרים בלבד';
+            lowChip.onclick = () => filterByCategory('LOW_STOCK');
+            container.appendChild(lowChip);
+
+            categories.forEach(cat => {
+                const chip = document.createElement('div');
+                chip.className = `filter-chip ${selectedCategoryFilter === cat ? 'active' : ''}`;
+                chip.innerText = cat;
+                chip.onclick = () => filterByCategory(cat);
+                container.appendChild(chip);
+            });
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventoryContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let filteredItems = itemsData.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+                let matchesCategory = true;
+                if (selectedCategoryFilter === 'LOW_STOCK') {
+                    matchesCategory = item.qty <= item.minQty;
+                } else if (selectedCategoryFilter !== 'ALL') {
+                    matchesCategory = item.category === selectedCategoryFilter;
+                }
+                return matchesSearch && matchesCategory;
+            });
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">לא נמצאו מוצרים תואמים</div>';
+                return;
+            }
+
             const categories = {};
-            data.forEach(item => {
+            filteredItems.forEach(item => {
                 if (!categories[item.category]) categories[item.category] = [];
                 categories[item.category].push(item);
             });
 
-            for (const [cat, items] of Object.entries(categories)) {
+            let catIdx = 0;
+            for (const [catName, items] of Object.entries(categories)) {
+                catIdx++;
+                const card = document.createElement('div');
+                const isCollapsed = !!collapsedCategories[catIdx];
+                card.className = `category-card ${isCollapsed ? 'collapsed' : ''}`;
+
                 let itemsHtml = '';
-                items.forEach(i => {
+                items.forEach(item => {
+                    const isLow = item.qty <= item.minQty;
                     itemsHtml += `
-                        <div class="row">
-                            <div><strong>${i.name}</strong></div>
-                            <div class="controls">
-                                <button class="qty-btn" onclick="changeQty(${i.id}, -1)">-</button>
-                                <span>${i.qty}</span>
-                                <button class="qty-btn" onclick="changeQty(${i.id}, 1)">+</button>
+                        <div class="item-row">
+                            <div class="item-info">
+                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
+                                <div>
+                                    <div class="item-name">${item.name}</div>
+                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
+                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="counter-controls">
+                                <button class="btn-qty" onclick="updateQty(${item.id}, -1)">-</button>
+                                <span class="qty-display">${item.qty}</span>
+                                <button class="btn-qty" onclick="updateQty(${item.id}, 1)">+</button>
                             </div>
                         </div>
                     `;
                 });
-                app.innerHTML += `<div class="card"><div class="title">${cat}</div>${itemsHtml}</div>`;
+
+                card.innerHTML = `
+                    <div class="category-title" onclick="toggleCatIndex(${catIdx})">
+                        <span>${catName}</span>
+                        <span>${isCollapsed ? '►' : '▼'}</span>
+                    </div>
+                    <div class="item-list-container">${itemsHtml}</div>
+                `;
+                container.appendChild(card);
             }
         }
-
-        window.changeQty = function(id, delta) {
-            const item = data.find(x => x.id === id);
-            if (item) {
-                item.qty = Math.max(0, item.qty + delta);
-                localStorage.setItem('inv_data_v1', JSON.stringify(data));
-                render();
-            }
-        };
-
-        window.resetData = function() {
+    </script>
+</body>
+</html>
