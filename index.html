@@ -212,13 +212,17 @@
         .btn-cancel { background: #95a5a6; color: white; }
         .btn-delete { background: #e74c3c; color: white; display: none; }
     </style>
+
+    <!-- ספריות Firebase בגרסת Compat היציבה -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
     <header>
         <button class="header-add-btn" onclick="openAddModal()">+</button>
         <h1>מלאי ציוד ניקיון ופארם</h1>
-        <span class="status-badge" id="syncStatus">מקומי-בטוח</span>
+        <span class="status-badge" id="syncStatus">מתחבר...</span>
     </header>
 
     <div id="inventoryContainer"></div>
@@ -290,33 +294,85 @@
             { id: 405, name: "שקיות אוכל / זיפלוק", category: "כללי ומתכלים", qty: 1, minQty: 1 }
         ];
 
+        // טעינה ראשונית בטוחה מהזיכרון המקומי כדי למנוע מסך לבן בשום מצב
         let itemsData = defaultList;
         try {
-            const saved = localStorage.getItem('home_inventory_data_safe');
-            if (saved) {
-                const parsed = JSON.parse(saved);
+            const localSaved = localStorage.getItem('home_inventory_safe_cache');
+            if (localSaved) {
+                const parsed = JSON.parse(localSaved);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     itemsData = parsed;
                 }
             }
         } catch (e) {
-            console.error("Storage load error, using default", e);
+            console.error("Local load error", e);
         }
 
-        function saveData() {
-            try {
-                localStorage.setItem('home_inventory_data_safe', JSON.stringify(itemsData));
-            } catch (e) {
-                console.error("Storage save error", e);
-            }
-            renderInventory();
+        renderInventory();
+
+        // חיבור לענן Firebase לסנכרון בינך לבין אביטל
+        const firebaseConfig = {
+          apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
+          authDomain: "home-inventory-6d54b.firebaseapp.com",
+          databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
+          projectId: "home-inventory-6d54b",
+          storageBucket: "home-inventory-6d54b.firebasestorage.app",
+          messagingSenderId: "486810614390",
+          appId: "1:486810614390:web:9212c9141897028a9f3d57",
+          measurementId: "G-FLZVWLP90C"
+        };
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.database();
+            const inventoryRef = db.ref('inventory');
+
+            inventoryRef.on('value', (snapshot) => {
+                const raw = snapshot.val();
+                if (raw) {
+                    let arr = [];
+                    if (Array.isArray(raw)) {
+                        arr = raw.filter(x => x !== null && x !== undefined);
+                    } else if (typeof raw === 'object') {
+                        arr = Object.values(raw).filter(x => x !== null && x !== undefined);
+                    }
+                    if (arr.length > 0) {
+                        itemsData = arr;
+                        localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                        renderInventory();
+                        document.getElementById('syncStatus').innerText = 'מסונכרן';
+                    }
+                } else {
+                    // אם הענן ריק לגמרי, נטען אליו את הרשימה הראשונית
+                    inventoryRef.set(defaultList);
+                }
+            }, (error) => {
+                console.error("Firebase sync error:", error);
+                document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+            });
+
+            window.syncToCloud = function() {
+                try {
+                    localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                    inventoryRef.set(itemsData);
+                } catch (e) {
+                    console.error("Save error", e);
+                }
+            };
+        } catch (err) {
+            console.error("Firebase init error", err);
+            document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+            window.syncToCloud = function() {
+                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+            };
         }
 
         window.updateQty = function(id, delta) {
             const item = itemsData.find(i => i.id === id);
             if (item) {
                 item.qty = Math.max(0, item.qty + delta);
-                saveData();
+                renderInventory();
+                if (typeof window.syncToCloud === 'function') window.syncToCloud();
             }
         };
 
@@ -375,7 +431,8 @@
                 itemsData.push(newItem);
             }
 
-            saveData();
+            renderInventory();
+            if (typeof window.syncToCloud === 'function') window.syncToCloud();
             closeModal();
         };
 
@@ -385,7 +442,8 @@
 
             if (confirm('האם אתה בטוח שברצונך למחוק את המוצר?')) {
                 itemsData = itemsData.filter(i => i.id != editId);
-                saveData();
+                renderInventory();
+                if (typeof window.syncToCloud === 'function') window.syncToCloud();
                 closeModal();
             }
         };
@@ -435,8 +493,6 @@
                 container.appendChild(card);
             }
         }
-
-        renderInventory();
     </script>
 </body>
 </html>
