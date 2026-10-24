@@ -417,16 +417,39 @@
 
             categories.forEach(cat => {
                 const chip = document.createElement('div');
-                chip.className = `filter-chip ${selectedCategoryFilter === cat ? 'active' : ''}`; chip.innerText = cat; chip.onclick = () => filterByCategory(cat); container.appendChild(chip); }); }  function renderInventory() { const container = document.getElementById('inventoryContainer'); if (!container) return; container.innerHTML = '';  let filteredItems = itemsData.filter(item => { const matchesSearch = item.name.toLowerCase().includes(searchQuery); let matchesCategory = true; if (selectedCategoryFilter === 'LOW_STOCK') { matchesCategory = item.qty <= item.minQty; } else if (selectedCategoryFilter !== 'ALL') { matchesCategory = item.category === selectedCategoryFilter; } return matchesSearch && matchesCategory; });  if (filteredItems.length === 0) { container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">לא נמצאו מוצרים תואמים</div>'; return; }  const categories = {}; filteredItems.forEach(item => { if (!categories[item.category]) categories[item.category] = []; categories[item.category].push(item); });  let catIdx = 0; for (const [catName, items] of Object.entries(categories)) { catIdx++; const card = document.createElement('div'); const isCollapsed = !!collapsedCategories[catIdx]; card.className = `category-card ${isCollapsed ? 'collapsed' : ''}`;
+                chip.className = `filter-chip ${selectedCategoryFilter === cat ? 'active' : ''}`;
+                chip.innerText = cat;
+                chip.onclick = () => filterByCategory(cat);
+                container.appendChild(chip);
+            });
+        }
 
-                let itemsHtml = '';
-                items.forEach(item => {
-                    const isLow = item.qty <= item.minQty;
-                    itemsHtml += `
-                        <div class="item-row">
-                            <div class="item-info">
-                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
-                                <div>
-                                    <div class="item-name">${item.name}</div>
-                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
-                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty
+        function renderInventory() {
+            const container = document.getElementById('inventoryContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let filteredItems = itemsData.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+                let matchesCategory = true;
+                if (selectedCategoryFilter === 'LOW_STOCK') {
+                    matchesCategory = item.qty <= item.minQty;
+                } else if (selectedCategoryFilter !== 'ALL') {
+                    matchesCategory = item.category === selectedCategoryFilter;
+                }
+                return matchesSearch && matchesCategory;
+            });
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">לא נמצאו מוצרים תואמים</div>';
+                return;
+            }
+
+            const categories = {};
+            filteredItems.forEach(item => {
+                if (!categories[item.category]) categories[item.category] = [];
+                categories[item.category].push(item);
+            });
+
+            let catIdx = 0;
+            for (const [catName, items] of Object.entries(categories))
