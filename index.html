@@ -397,7 +397,6 @@
             console.error("Storage error:", e);
         }
 
-        // הגדרת הפונקציות גלובלית לפני הרינדור
         window.handleSearch = function() {
             searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
             renderApp();
@@ -582,4 +581,105 @@
             for (const [catName, items] of Object.entries(categories)) {
                 catIdx++;
                 const card = document.createElement('div');
-                const
+                const isCollapsed = !!collapsedCategories[catIdx];
+                card.className = `category-card ${isCollapsed ? 'collapsed' : ''}`;
+
+                let itemsHtml = '';
+                items.forEach(item => {
+                    const isLow = item.qty <= item.minQty;
+                    itemsHtml += `
+                        <div class="item-row">
+                            <div class="item-info">
+                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
+                                <div>
+                                    <div class="item-name">${item.name}</div>
+                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
+                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="counter-controls">
+                                <button class="btn-qty" onclick="updateQty(${item.id}, -1)">-</button>
+                                <span class="qty-display">${item.qty}</span>
+                                <button class="btn-qty" onclick="updateQty(${item.id}, 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="category-title" onclick="toggleCatIndex(${catIdx})">
+                        <span>${catName}</span>
+                        <span>${isCollapsed ? '►' : '▼'}</span>
+                    </div>
+                    <div class="item-list-container">${itemsHtml}</div>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function renderApp() {
+            try {
+                renderFilters();
+                renderInventory();
+            } catch (err) {
+                console.error("Render error:", err);
+            }
+        }
+
+        renderApp();
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                      apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
+                      authDomain: "home-inventory-6d54b.firebaseapp.com",
+                      databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
+                      projectId: "home-inventory-6d54b",
+                      storageBucket: "home-inventory-6d54b.firebasestorage.app",
+                      messagingSenderId: "486810614390",
+                      appId: "1:486810614390:web:9212c9141897028a9f3d57",
+                      measurementId: "G-FLZVWLP90C"
+                    };
+
+                    firebase.initializeApp(firebaseConfig);
+                    const db = firebase.database();
+                    const inventoryRef = db.ref('inventory');
+
+                    inventoryRef.on('value', (snapshot) => {
+                        const raw = snapshot.val();
+                        if (raw) {
+                            let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
+                            if (arr.length > 0) {
+                                itemsData = arr;
+                                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                                renderApp();
+                                document.getElementById('syncStatus').innerText = 'מסונכרן';
+                            }
+                        } else {
+                            inventoryRef.set(defaultList);
+                        }
+                    }, (err) => {
+                        document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+                    });
+
+                    window.syncToCloud = function() {
+                        try {
+                            localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                            inventoryRef.set(itemsData);
+                        } catch (e) { console.error(e); }
+                    };
+                }
+            } catch (err) {
+                document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+            }
+        });
+    </script>
+</body>
+</html>
