@@ -390,6 +390,8 @@
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     itemsData = parsed;
                 }
+            } else {
+                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(defaultList));
             }
         } catch (e) {
             console.error("Storage error:", e);
@@ -402,4 +404,29 @@
             const categories = [...new Set(itemsData.map(i => i.category))];
 
             const allChip = document.createElement('div');
-            allChip.className = `filter
+            allChip.className = `filter-chip ${selectedCategoryFilter === 'ALL' ? 'active' : ''}`;
+            allChip.innerText = 'הכל';
+            allChip.onclick = () => filterByCategory('ALL');
+            container.appendChild(allChip);
+
+            const lowChip = document.createElement('div');
+            lowChip.className = `filter-chip low-stock-chip ${selectedCategoryFilter === 'LOW_STOCK' ? 'active' : ''}`;
+            lowChip.innerText = '⚠️ חסרים בלבד';
+            lowChip.onclick = () => filterByCategory('LOW_STOCK');
+            container.appendChild(lowChip);
+
+            categories.forEach(cat => {
+                const chip = document.createElement('div');
+                chip.className = `filter-chip ${selectedCategoryFilter === cat ? 'active' : ''}`; chip.innerText = cat; chip.onclick = () => filterByCategory(cat); container.appendChild(chip); }); }  function renderInventory() { const container = document.getElementById('inventoryContainer'); if (!container) return; container.innerHTML = '';  let filteredItems = itemsData.filter(item => { const matchesSearch = item.name.toLowerCase().includes(searchQuery); let matchesCategory = true; if (selectedCategoryFilter === 'LOW_STOCK') { matchesCategory = item.qty <= item.minQty; } else if (selectedCategoryFilter !== 'ALL') { matchesCategory = item.category === selectedCategoryFilter; } return matchesSearch && matchesCategory; });  if (filteredItems.length === 0) { container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">לא נמצאו מוצרים תואמים</div>'; return; }  const categories = {}; filteredItems.forEach(item => { if (!categories[item.category]) categories[item.category] = []; categories[item.category].push(item); });  let catIdx = 0; for (const [catName, items] of Object.entries(categories)) { catIdx++; const card = document.createElement('div'); const isCollapsed = !!collapsedCategories[catIdx]; card.className = `category-card ${isCollapsed ? 'collapsed' : ''}`;
+
+                let itemsHtml = '';
+                items.forEach(item => {
+                    const isLow = item.qty <= item.minQty;
+                    itemsHtml += `
+                        <div class="item-row">
+                            <div class="item-info">
+                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
+                                <div>
+                                    <div class="item-name">${item.name}</div>
+                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
+                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty
