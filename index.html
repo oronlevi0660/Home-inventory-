@@ -301,7 +301,7 @@
             <button class="header-btn whatsapp-btn" onclick="shareToWhatsApp()">📲 וואטסאפ</button>
         </div>
         <h1>מלאי הבית</h1>
-        <span class="status-badge" id="syncStatus">מוכן</span>
+        <span class="status-badge" id="syncStatus">מתחבר...</span>
     </header>
 
     <div class="search-container">
@@ -375,7 +375,7 @@
             { id: 402, name: "נייר סופג / מגבוני מטבח", category: "כללי ומתכלים", qty: 1, minQty: 1 },
             { id: 403, name: "ספוגים לכלים / סקוטש", category: "כללי ומתכלים", qty: 1, minQty: 1 },
             { id: 404, name: "נייר אלומיניום / ניילון נצמד", category: "כללי ומתכלים", qty: 1, minQty: 1 },
-            { id:505, name: "שקיות אוכל / זיפלוק", category: "כללי ומתכלים", qty: 1, minQty: 1 }
+            { id: 405, name: "שקיות אוכל / זיפלוק", category: "כללי ומתכלים", qty: 1, minQty: 1 }
         ];
 
         let itemsData = defaultList;
@@ -383,6 +383,7 @@
         let searchQuery = '';
         let collapsedCategories = {};
 
+        // גיבוי מקומי מיידי למניעת מסך לבן בזמן טעינה
         try {
             const localSaved = localStorage.getItem('home_inventory_safe_cache');
             if (localSaved) {
@@ -390,12 +391,8 @@
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     itemsData = parsed;
                 }
-            } else {
-                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(defaultList));
             }
-        } catch (e) {
-            itemsData = defaultList;
-        }
+        } catch (e) {}
 
         window.handleSearch = function() {
             searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -433,7 +430,7 @@
             if (item) {
                 item.qty = Math.max(0, item.qty + delta);
                 renderApp();
-                saveLocal();
+                syncToCloud();
             }
         };
 
@@ -502,7 +499,7 @@
             }
 
             renderApp();
-            saveLocal();
+            syncToCloud();
             closeModal();
         };
 
@@ -511,16 +508,10 @@
             if (editId && confirm('האם אתה בטוח שברצונך למחוק את המוצר?')) {
                 itemsData = itemsData.filter(i => i.id != editId);
                 renderApp();
-                saveLocal();
+                syncToCloud();
                 closeModal();
             }
         };
-
-        function saveLocal() {
-            try {
-                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
-            } catch (e) {}
-        }
 
         function renderFilters() {
             const container = document.getElementById('categoryFiltersContainer');
@@ -627,6 +618,65 @@
         window.addEventListener('DOMContentLoaded', () => {
             renderApp();
         });
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <script>
+        let inventoryRef = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderApp();
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                      apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
+                      authDomain: "home-inventory-6d54b.firebaseapp.com",
+                      databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
+                      projectId: "home-inventory-6d54b",
+                      storageBucket: "home-inventory-6d54b.firebasestorage.app",
+                      messagingSenderId: "486810614390",
+                      appId: "1:486810614390:web:9212c9141897028a9f3d57",
+                      measurementId: "G-FLZVWLP90C"
+                    };
+
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    const db = firebase.database();
+                    inventoryRef = db.ref('inventory');
+
+                    inventoryRef.on('value', (snapshot) => {
+                        const raw = snapshot.val();
+                        if (raw) {
+                            let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
+                            if (arr.length > 0) {
+                                itemsData = arr;
+                                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                                renderApp();
+                                document.getElementById('syncStatus').innerText = 'מסונכרן';
+                            }
+                        } else {
+                            inventoryRef.set(defaultList);
+                        }
+                    }, (err) => {
+                        document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+                    });
+                }
+            } catch (err) {
+                document.getElementById('syncStatus').innerText = 'מקומי בלבד';
+            }
+        });
+
+        window.syncToCloud = function() {
+            try {
+                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                if (inventoryRef) {
+                    inventoryRef.set(itemsData);
+                }
+            } catch (e) {}
+        };
     </script>
 </body>
 </html>
