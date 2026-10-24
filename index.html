@@ -18,7 +18,7 @@
             background-color: #f4f6f9;
             color: #333;
             padding: 15px;
-            padding-bottom: 80px;
+            padding-bottom: 90px;
         }
 
         header {
@@ -144,6 +144,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 100;
         }
 
         .modal {
@@ -268,7 +269,6 @@
         let itemsData = [];
 
         const fullInitialList = [
-            // חומרי ניקוי
             { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
             { id: 102, name: "נוזל כלים", category: "חומרי ניקוי", qty: 1, minQty: 1 },
             { id: 103, name: "ספריי חלונות", category: "חומרי ניקוי", qty: 1, minQty: 1 },
@@ -277,7 +277,6 @@
             { id: 106, name: "אקונומיקה", category: "חומרי ניקוי", qty: 1, minQty: 1 },
             { id: 107, name: "מטליות מיקרופייבר", category: "חומרי ניקוי", qty: 1, minQty: 1 },
 
-            // מוצרי פארם וטואלטיקה
             { id: 201, name: "נייר טואלט", category: "מוצרי פארם וטואלטיקה", qty: 2, minQty: 1 },
             { id: 202, name: "סבון גוף נוזלי", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
             { id: 203, name: "שמפו", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
@@ -287,14 +286,12 @@
             { id: 207, name: "משחת שיניים", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
             { id: 208, name: "דאודורנט", category: "מוצרי פארם וטואלטיקה", qty: 1, minQty: 1 },
 
-            // כביסה
             { id: 301, name: "ג'ל / אבקת כביסה", category: "כביסה", qty: 1, minQty: 1 },
             { id: 302, name: "מרכך כביסה", category: "כביסה", qty: 1, minQty: 1 },
             { id: 303, name: "קפסולות כביסה", category: "כביסה", qty: 1, minQty: 1 },
             { id: 304, name: "דפי יבשן / מפיצי ריח", category: "כביסה", qty: 1, minQty: 1 },
             { id: 305, name: "מסיר כתמים", category: "כביסה", qty: 1, minQty: 1 },
 
-            // כללי ומתכלים
             { id: 401, name: "שקיות זבל", category: "כללי ומתכלים", qty: 3, minQty: 1 },
             { id: 402, name: "נייר סופג / מגבוני מטבח", category: "כללי ומתכלים", qty: 1, minQty: 1 },
             { id: 403, name: "ספוגים לכלים / סקוטש", category: "כללי ומתכלים", qty: 1, minQty: 1 },
@@ -307,7 +304,6 @@
             if (data && Array.isArray(data) && data.length > 6) {
                 itemsData = data;
             } else {
-                // דריסה אוטומטית בענן עם הרשימה המלאה במידה והענן הכיל רק את 6 פריטי ברירת המחדל
                 itemsData = fullInitialList;
                 saveToCloud();
             }
