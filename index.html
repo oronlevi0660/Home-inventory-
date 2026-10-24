@@ -77,4 +77,206 @@
             color: #2c3e50;
             border-bottom: 2px solid #ecf0f1;
             padding-bottom: 8px;
-            margin-bottom: 1
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-edit {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.8;
+        }
+
+        .btn-edit:active {
+            opacity: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .item-status {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 2px;
+        }
+
+        .low-stock {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-qty {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background-color: #e3e8ef;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .btn-qty:active {
+            background-color: #cbd5e1;
+        }
+
+        .qty-display {
+            font-weight: bold;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .modal-right-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-save { background: #27ae60; color: white; }
+        .btn-cancel { background: #95a5a6; color: white; }
+        .btn-delete { background: #e74c3c; color: white; display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="header-add-btn" onclick="openAddModal()">+</button>
+        <h1>מלאי ציוד ניקיון ופארם</h1>
+        <span class="status-badge" id="syncStatus">מסונכרן</span>
+    </header>
+
+    <div id="inventoryContainer">טוען נתונים...</div>
+
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">הוספת מוצר חדש</h3>
+            <input type="hidden" id="editItemId">
+            <div class="form-group">
+                <label>שם המוצר</label>
+                <input type="text" id="itemName" placeholder="למשל: אקונומיקה">
+            </div>
+            <div class="form-group">
+                <label>קטגוריה</label>
+                <select id="itemCategory">
+                    <option value="חומרי ניקוי">חומרי ניקוי</option>
+                    <option value="מוצרי פארם וטואלטיקה">מוצרי פארם וטואלטיקה</option>
+                    <option value="כביסה">כביסה</option>
+                    <option value="כללי ומתכלים">כללי ומתכלים</option>
+                </select>
+            </div>
+            <div class="form-group" id="qtyGroup">
+                <label>כמות נוכחית</label>
+                <input type="number" id="itemQty" value="1" min="0">
+            </div>
+            <div class="form-group">
+                <label>כמות מינימום להתראה</label>
+                <input type="number" id="itemMinQty" value="1" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-action btn-delete" id="deleteBtn" onclick="deleteItem()">מחק מוצר</button>
+                <div class="modal-right-actions">
+                    <button class="btn-action btn-cancel" onclick="closeModal()">ביטול</button>
+                    <button class="btn-action btn-save" onclick="saveItem()">שמור</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
+          authDomain: "home-inventory-6d54b.firebaseapp.com",
+          databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
+          projectId: "home-inventory-6d54b",
+          storageBucket: "home
