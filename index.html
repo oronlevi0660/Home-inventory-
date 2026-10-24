@@ -33,7 +33,7 @@
         }
 
         header h1 {
-            font-size: 1rem;
+            font-size: 0.95rem;
             flex-grow: 1;
             text-align: center;
         }
@@ -48,7 +48,7 @@
 
         .header-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
         }
 
@@ -57,9 +57,9 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            font-size: 1.2rem;
+            width: 34px;
+            height: 34px;
+            font-size: 1.1rem;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -70,12 +70,12 @@
         .whatsapp-btn {
             background-color: #25D366;
             color: white;
-            border-radius: 20px;
-            padding: 0 10px;
+            border-radius: 18px;
+            padding: 0 8px;
             width: auto;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: bold;
-            height: 36px;
+            height: 34px;
         }
 
         .search-container {
@@ -298,9 +298,9 @@
     <header>
         <div class="header-actions">
             <button class="header-btn" onclick="openAddModal()">+</button>
-            <button class="header-btn whatsapp-btn" onclick="shareToWhatsApp()">📲 שרשור קניות</button>
+            <button class="header-btn whatsapp-btn" onclick="shareToWhatsApp()">📲 וואטסאפ</button>
         </div>
-        <h1>מלאי ציוד ניקיון ופארם</h1>
+        <h1>מלאי הבית</h1>
         <span class="status-badge" id="syncStatus">מוכן</span>
     </header>
 
@@ -387,201 +387,13 @@
             const localSaved = localStorage.getItem('home_inventory_safe_cache');
             if (localSaved) {
                 const parsed = JSON.parse(localSaved);
-                if (Array.isArray(parsed) && parsed.length > 0) itemsData = parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    itemsData = parsed;
+                }
             }
         } catch (e) {
-            console.error(e);
-            localStorage.removeItem('home_inventory_safe_cache');
+            console.error("Storage error:", e);
         }
-
-        function renderApp() {
-            try {
-                renderFilters();
-                renderInventory();
-            } catch (err) {
-                console.error("Render error", err);
-            }
-        }
-
-        renderApp();
-    </script>
-
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            try {
-                if (typeof firebase !== 'undefined') {
-                    const firebaseConfig = {
-                      apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
-                      authDomain: "home-inventory-6d54b.firebaseapp.com",
-                      databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
-                      projectId: "home-inventory-6d54b",
-                      storageBucket: "home-inventory-6d54b.firebasestorage.app",
-                      messagingSenderId: "486810614390",
-                      appId: "1:486810614390:web:9212c9141897028a9f3d57",
-                      measurementId: "G-FLZVWLP90C"
-                    };
-
-                    firebase.initializeApp(firebaseConfig);
-                    const db = firebase.database();
-                    const inventoryRef = db.ref('inventory');
-
-                    inventoryRef.on('value', (snapshot) => {
-                        const raw = snapshot.val();
-                        if (raw) {
-                            let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
-                            if (arr.length > 0) {
-                                itemsData = arr;
-                                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
-                                renderApp();
-                                document.getElementById('syncStatus').innerText = 'מסונכרן';
-                            }
-                        } else {
-                            inventoryRef.set(defaultList);
-                        }
-                    }, (err) => {
-                        document.getElementById('syncStatus').innerText = 'מקומי בלבד';
-                    });
-
-                    window.syncToCloud = function() {
-                        try {
-                            localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
-                            inventoryRef.set(itemsData);
-                        } catch (e) { console.error(e); }
-                    };
-                }
-            } catch (err) {
-                document.getElementById('syncStatus').innerText = 'מקומי בלבד';
-            }
-        });
-
-        if (!window.syncToCloud) {
-            window.syncToCloud = function() {
-                try {
-                    localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
-                } catch (e) { console.error(e); }
-            };
-        }
-
-        window.handleSearch = function() {
-            searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
-            renderApp();
-        };
-
-        window.filterByCategory = function(cat) {
-            selectedCategoryFilter = cat;
-            renderApp();
-        };
-
-        window.toggleCatIndex = function(idx) {
-            collapsedCategories[idx] = !collapsedCategories[idx];
-            renderApp();
-        };
-
-        window.shareToWhatsApp = function() {
-            const lowStockItems = itemsData.filter(i => i.qty <= i.minQty);
-            if (lowStockItems.length === 0) {
-                alert("אין מוצרים בחוסר ברשימה! 🎉");
-                return;
-            }
-
-            let text = "🛒 *רשימת קניות לבית:* \n\n";
-            lowStockItems.forEach(item => {
-                text += `• ${item.name} (כמות נוכחית: ${item.qty})\n`;
-            });
-
-            const encodedText = encodeURIComponent(text);
-            window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
-        };
-
-        window.updateQty = function(id, delta) {
-            const item = itemsData.find(i => i.id === id);
-            if (item) {
-                item.qty = Math.max(0, item.qty + delta);
-                renderApp();
-                if (typeof window.syncToCloud === 'function') window.syncToCloud();
-            }
-        };
-
-        function updateCategorySelect(selectedCat = '') {
-            const select = document.getElementById('itemCategory');
-            select.innerHTML = '';
-            const categories = [...new Set(itemsData.map(i => i.category))];
-            categories.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.innerText = cat;
-                if (cat === selectedCat) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        window.openAddModal = function() {
-            document.getElementById('modalTitle').innerText = 'הוספת מוצר חדש';
-            document.getElementById('editItemId').value = '';
-            document.getElementById('itemName').value = '';
-            document.getElementById('newCategoryInput').value = '';
-            document.getElementById('itemQty').value = '1';
-            document.getElementById('itemMinQty').value = '1';
-            document.getElementById('qtyGroup').style.display = 'block';
-            document.getElementById('deleteBtn').style.display = 'none';
-            updateCategorySelect();
-            document.getElementById('itemModal').style.display = 'flex';
-        };
-
-        window.openEditModal = function(id) {
-            const item = itemsData.find(i => i.id === id);
-            if (!item) return;
-            document.getElementById('modalTitle').innerText = 'עריכת מוצר';
-            document.getElementById('editItemId').value = item.id;
-            document.getElementById('itemName').value = item.name;
-            document.getElementById('newCategoryInput').value = '';
-            document.getElementById('itemMinQty').value = item.minQty;
-            document.getElementById('qtyGroup').style.display = 'none';
-            document.getElementById('deleteBtn').style.display = 'block';
-            updateCategorySelect(item.category);
-            document.getElementById('itemModal').style.display = 'flex';
-        };
-
-        window.closeModal = function() { document.getElementById('itemModal').style.display = 'none'; };
-
-        window.saveItem = function() {
-            const editId = document.getElementById('editItemId').value;
-            const name = document.getElementById('itemName').value.trim();
-            const newCatInput = document.getElementById('newCategoryInput').value.trim();
-            const category = newCatInput ? newCatInput : document.getElementById('itemCategory').value;
-            const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
-
-            if (!name) return alert('נא להזין שם מוצר');
-
-            if (editId) {
-                const item = itemsData.find(i => i.id == editId);
-                if (item) {
-                    item.name = name;
-                    item.category = category;
-                    item.minQty = minQty;
-                }
-            } else {
-                const qty = parseInt(document.getElementById('itemQty').value) || 0;
-                itemsData.push({ id: Date.now(), name, category, qty, minQty });
-            }
-
-            renderApp();
-            if (typeof window.syncToCloud === 'function') window.syncToCloud();
-            closeModal();
-        };
-
-        window.deleteItem = function() {
-            const editId = document.getElementById('editItemId').value;
-            if (editId && confirm('האם אתה בטוח שברצונך למחוק את המוצר?')) {
-                itemsData = itemsData.filter(i => i.id != editId);
-                renderApp();
-                if (typeof window.syncToCloud === 'function') window.syncToCloud();
-                closeModal();
-            }
-        };
 
         function renderFilters() {
             const container = document.getElementById('categoryFiltersContainer');
@@ -590,93 +402,4 @@
             const categories = [...new Set(itemsData.map(i => i.category))];
 
             const allChip = document.createElement('div');
-            allChip.className = `filter-chip ${selectedCategoryFilter === 'ALL' ? 'active' : ''}`;
-            allChip.innerText = 'הכל';
-            allChip.onclick = () => filterByCategory('ALL');
-            container.appendChild(allChip);
-
-            const lowChip = document.createElement('div');
-            lowChip.className = `filter-chip low-stock-chip ${selectedCategoryFilter === 'LOW_STOCK' ? 'active' : ''}`;
-            lowChip.innerText = '⚠️ חסרים בלבד';
-            lowChip.onclick = () => filterByCategory('LOW_STOCK');
-            container.appendChild(lowChip);
-
-            categories.forEach(cat => {
-                const chip = document.createElement('div');
-                chip.className = `filter-chip ${selectedCategoryFilter === cat ? 'active' : ''}`;
-                chip.innerText = cat;
-                chip.onclick = () => filterByCategory(cat);
-                container.appendChild(chip);
-            });
-        }
-
-        function renderInventory() {
-            const container = document.getElementById('inventoryContainer');
-            if (!container) return;
-            container.innerHTML = '';
-
-            let filteredItems = itemsData.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
-                let matchesCategory = true;
-                if (selectedCategoryFilter === 'LOW_STOCK') {
-                    matchesCategory = item.qty <= item.minQty;
-                } else if (selectedCategoryFilter !== 'ALL') {
-                    matchesCategory = item.category === selectedCategoryFilter;
-                }
-                return matchesSearch && matchesCategory;
-            });
-
-            if (filteredItems.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">לא נמצאו מוצרים תואמים</div>';
-                return;
-            }
-
-            const categories = {};
-            filteredItems.forEach(item => {
-                if (!categories[item.category]) categories[item.category] = [];
-                categories[item.category].push(item);
-            });
-
-            let catIdx = 0;
-            for (const [catName, items] of Object.entries(categories)) {
-                catIdx++;
-                const card = document.createElement('div');
-                const isCollapsed = !!collapsedCategories[catIdx];
-                card.className = `category-card ${isCollapsed ? 'collapsed' : ''}`;
-
-                let itemsHtml = '';
-                items.forEach(item => {
-                    const isLow = item.qty <= item.minQty;
-                    itemsHtml += `
-                        <div class="item-row">
-                            <div class="item-info">
-                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
-                                <div>
-                                    <div class="item-name">${item.name}</div>
-                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
-                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="counter-controls">
-                                <button class="btn-qty" onclick="updateQty(${item.id}, -1)">-</button>
-                                <span class="qty-display">${item.qty}</span>
-                                <button class="btn-qty" onclick="updateQty(${item.id}, 1)">+</button>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                card.innerHTML = `
-                    <div class="category-title" onclick="toggleCatIndex(${catIdx})">
-                        <span>${catName}</span>
-                        <span>${isCollapsed ? '►' : '▼'}</span>
-                    </div>
-                    <div class="item-list-container">${itemsHtml}</div>
-                `;
-                container.appendChild(card);
-            }
-        }
-    </script>
-</body>
-</html>
+            allChip.className = `filter
