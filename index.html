@@ -397,6 +397,133 @@
             console.error("Storage error:", e);
         }
 
+        // הגדרת הפונקציות גלובלית לפני הרינדור
+        window.handleSearch = function() {
+            searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+            renderApp();
+        };
+
+        window.filterByCategory = function(cat) {
+            selectedCategoryFilter = cat;
+            renderApp();
+        };
+
+        window.toggleCatIndex = function(idx) {
+            collapsedCategories[idx] = !collapsedCategories[idx];
+            renderApp();
+        };
+
+        window.shareToWhatsApp = function() {
+            const lowStockItems = itemsData.filter(i => i.qty <= i.minQty);
+            if (lowStockItems.length === 0) {
+                alert("אין מוצרים בחוסר ברשימה! 🎉");
+                return;
+            }
+
+            let text = "🛒 *רשימת קניות לבית:* \n\n";
+            lowStockItems.forEach(item => {
+                text += `• ${item.name} (כמות נוכחית: ${item.qty})\n`;
+            });
+
+            const encodedText = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+        };
+
+        window.updateQty = function(id, delta) {
+            const item = itemsData.find(i => i.id === id);
+            if (item) {
+                item.qty = Math.max(0, item.qty + delta);
+                renderApp();
+                saveLocal();
+            }
+        };
+
+        function updateCategorySelect(selectedCat = '') {
+            const select = document.getElementById('itemCategory');
+            if (!select) return;
+            select.innerHTML = '';
+            const categories = [...new Set(itemsData.map(i => i.category))];
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.innerText = cat;
+                if (cat === selectedCat) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        window.openAddModal = function() {
+            document.getElementById('modalTitle').innerText = 'הוספת מוצר חדש';
+            document.getElementById('editItemId').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('newCategoryInput').value = '';
+            document.getElementById('itemQty').value = '1';
+            document.getElementById('itemMinQty').value = '1';
+            document.getElementById('qtyGroup').style.display = 'block';
+            document.getElementById('deleteBtn').style.display = 'none';
+            updateCategorySelect();
+            document.getElementById('itemModal').style.display = 'flex';
+        };
+
+        window.openEditModal = function(id) {
+            const item = itemsData.find(i => i.id === id);
+            if (!item) return;
+            document.getElementById('modalTitle').innerText = 'עריכת מוצר';
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('newCategoryInput').value = '';
+            document.getElementById('itemMinQty').value = item.minQty;
+            document.getElementById('qtyGroup').style.display = 'none';
+            document.getElementById('deleteBtn').style.display = 'block';
+            updateCategorySelect(item.category);
+            document.getElementById('itemModal').style.display = 'flex';
+        };
+
+        window.closeModal = function() { document.getElementById('itemModal').style.display = 'none'; };
+
+        window.saveItem = function() {
+            const editId = document.getElementById('editItemId').value;
+            const name = document.getElementById('itemName').value.trim();
+            const newCatInput = document.getElementById('newCategoryInput').value.trim();
+            const category = newCatInput ? newCatInput : document.getElementById('itemCategory').value;
+            const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
+
+            if (!name) return alert('נא להזין שם מוצר');
+
+            if (editId) {
+                const item = itemsData.find(i => i.id == editId);
+                if (item) {
+                    item.name = name;
+                    item.category = category;
+                    item.minQty = minQty;
+                }
+            } else {
+                const qty = parseInt(document.getElementById('itemQty').value) || 0;
+                itemsData.push({ id: Date.now(), name, category, qty, minQty });
+            }
+
+            renderApp();
+            saveLocal();
+            closeModal();
+        };
+
+        window.deleteItem = function() {
+            const editId = document.getElementById('editItemId').value;
+            if (editId && confirm('האם אתה בטוח שברצונך למחוק את המוצר?')) {
+                itemsData = itemsData.filter(i => i.id != editId);
+                renderApp();
+                saveLocal();
+                closeModal();
+            }
+        };
+
+        function saveLocal() {
+            try {
+                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
+                if (typeof window.syncToCloud === 'function') window.syncToCloud();
+            } catch (e) { console.error(e); }
+        }
+
         function renderFilters() {
             const container = document.getElementById('categoryFiltersContainer');
             if (!container) return;
@@ -452,4 +579,7 @@
             });
 
             let catIdx = 0;
-            for (const [catName, items] of Object.entries(categories))
+            for (const [catName, items] of Object.entries(categories)) {
+                catIdx++;
+                const card = document.createElement('div');
+                const
