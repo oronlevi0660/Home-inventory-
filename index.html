@@ -313,6 +313,24 @@
             flex: 1;
         }
 
+        .expiry-input-wrapper {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .btn-clear-date {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            height: 38px;
+            white-space: nowrap;
+        }
+
         .modal-actions {
             display: flex;
             justify-content: space-between;
@@ -389,7 +407,10 @@
                 </div>
                 <div class="form-group">
                     <label>תאריך תפוגה - אופציונלי</label>
-                    <input type="date" id="itemExpiry">
+                    <div class="expiry-input-wrapper">
+                        <input type="date" id="itemExpiry" style="flex-grow: 1;">
+                        <button type="button" class="btn-clear-date" onclick="clearExpiryDate()" title="נקה תאריך">איפוס</button>
+                    </div>
                 </div>
             </div>
             <div class="form-group">
@@ -439,6 +460,10 @@
         window.toggleCatIndex = function(idx) {
             collapsedCategories[idx] = !collapsedCategories[idx];
             renderApp();
+        };
+
+        window.clearExpiryDate = function() {
+            document.getElementById('itemExpiry').value = '';
         };
 
         window.shareToWhatsApp = function() {
@@ -517,263 +542,4 @@
 
         window.saveItem = function() {
             const editId = document.getElementById('editItemId').value;
-            const name = document.getElementById('itemName').value.trim();
-            const newCatInput = document.getElementById('newCategoryInput').value.trim();
-            const category = newCatInput ? newCatInput : document.getElementById('itemCategory').value;
-            const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
-            const price = document.getElementById('itemPrice').value.trim();
-            const expiry = document.getElementById('itemExpiry').value;
-            const note = document.getElementById('itemNote').value.trim();
-
-            if (!name) return alert('נא להזין שם מוצר');
-
-            if (editId) {
-                const item = itemsData.find(i => i.id == editId);
-                if (item) {
-                    item.name = name;
-                    item.category = category;
-                    item.minQty = minQty;
-                    item.price = price;
-                    item.expiry = expiry;
-                    item.note = note;
-                }
-            } else {
-                const qty = parseInt(document.getElementById('itemQty').value) || 0;
-                itemsData.push({ id: Date.now(), name, category, qty, minQty, price, expiry, note });
-            }
-
-            renderApp();
-            syncToCloud();
-            closeModal();
-        };
-
-        window.deleteItem = function() {
-            const editId = document.getElementById('editItemId').value;
-            if (editId && confirm('האם אתה בטוח שברצונך למחוק את המוצר?')) {
-                itemsData = itemsData.filter(i => i.id != editId);
-                renderApp();
-                syncToCloud();
-                closeModal();
-            }
-        };
-
-        function checkExpiryAlerts() {
-            const today = new Date();
-            const thirtyDaysFromNow = new Date();
-            thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-            const expiringSoonItems = itemsData.filter(item => {
-                if (!item.expiry) return false;
-                const expiryDate = new Date(item.expiry);
-                // בודקים אם התאריך עבר או חל בתוך 30 הימים הקרובים, ויש ממנו כמות גדולה מ-0
-                return expiryDate <= thirtyDaysFromNow && item.qty > 0;
-            });
-
-            // מציגים התראה פעם אחת בהפעלה אם יש מוצרים שפג תוקפם או עומדים לפוג
-            if (expiringSoonItems.length > 0) {
-                const alertKey = 'expiry_alert_shown_' + new Date().toDateString();
-                if (!sessionStorage.getItem(alertKey)) {
-                    let names = expiringSoonItems.map(i => i.name).join(', ');
-                    setTimeout(() => {
-                        alert(`⚠️ שימו לב! ישנם מוצרים שתאריך התפוגה שלהם קרוב או עבר:\n\n${names}\n\nמומלץ להשתמש בהם בהקדם!`);
-                    }, 500);
-                    sessionStorage.setItem(alertKey, 'true');
-                }
-            }
-        }
-
-        function renderFilters() {
-            const container = document.getElementById('categoryFiltersContainer');
-            if (!container) return;
-            container.innerHTML = '';
-            const categories = [...new Set(itemsData.map(i => i.category))];
-
-            const allChip = document.createElement('div');
-            allChip.className = `filter-chip ${selectedCategoryFilter === 'ALL' ? 'active' : ''}`;
-            allChip.innerText = 'הכל';
-            allChip.onclick = () => filterByCategory('ALL');
-            container.appendChild(allChip);
-
-            const lowChip = document.createElement('div');
-            lowChip.className = `filter-chip low-stock-chip ${selectedCategoryFilter === 'LOW_STOCK' ? 'active' : ''}`;
-            lowChip.innerText = '⚠️ חסרים בלבד';
-            lowChip.onclick = () => filterByCategory('LOW_STOCK');
-            container.appendChild(lowChip);
-
-            categories.forEach(cat => {
-                const chip = document.createElement('div');
-                chip.className = `filter-chip ${selectedCategoryFilter === cat ? 'active' : ''}`;
-                chip.innerText = cat;
-                chip.onclick = () => filterByCategory(cat);
-                container.appendChild(chip);
-            });
-        }
-
-        function renderInventory() {
-            const container = document.getElementById('inventoryContainer');
-            if (!container) return;
-            container.innerHTML = '';
-
-            let filteredItems = itemsData.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || 
-                                      (item.note && item.note.toLowerCase().includes(searchQuery));
-                let matchesCategory = true;
-                if (selectedCategoryFilter === 'LOW_STOCK') {
-                    matchesCategory = item.qty <= item.minQty;
-                } else if (selectedCategoryFilter !== 'ALL') {
-                    matchesCategory = item.category === selectedCategoryFilter;
-                }
-                return matchesSearch && matchesCategory;
-            });
-
-            if (filteredItems.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">לא נמצאו מוצרים תואמים</div>';
-                return;
-            }
-
-            const categories = {};
-            filteredItems.forEach(item => {
-                if (!categories[item.category]) categories[item.category] = [];
-                categories[item.category].push(item);
-            });
-
-            const today = new Date();
-            const thirtyDaysFromNow = new Date();
-            thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-            let catIdx = 0;
-            for (const [catName, items] of Object.entries(categories)) {
-                catIdx++;
-                const card = document.createElement('div');
-                const isCollapsed = !!collapsedCategories[catIdx];
-                card.className = `category-card ${isCollapsed ? 'collapsed' : ''}`;
-
-                let itemsHtml = '';
-                items.forEach(item => {
-                    const isLow = item.qty <= item.minQty;
-                    
-                    let isExpiringSoon = false;
-                    if (item.expiry) {
-                        const expDate = new Date(item.expiry);
-                        isExpiringSoon = expDate <= thirtyDaysFromNow;
-                    }
-                    
-                    let metaParts = [];
-                    if (item.price) metaParts.push(`<span class="item-price">💰 ₪${item.price}</span>`);
-                    if (item.expiry) {
-                        metaParts.push(`<span class="item-expiry ${isExpiringSoon ? 'expired-soon' : ''}">⏳ תפוגה: ${item.expiry} ${isExpiringSoon ? '⚠️' : ''}</span>`);
-                    }
-                    if (item.note) metaParts.push(`<span class="item-note">💬 ${item.note}</span>`);
-                    
-                    let metaHtml = metaParts.length > 0 ? `<div class="item-meta">${metaParts.join(' | ')}</div>` : '';
-
-                    itemsHtml += `
-                        <div class="item-row">
-                            <div class="item-info">
-                                <button class="btn-edit" onclick="openEditModal(${item.id})" title="ערוך מוצר">✏️</button>
-                                <div>
-                                    <div class="item-name">${item.name}</div>
-                                    <div class="item-status ${isLow ? 'low-stock' : ''}">
-                                        ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
-                                    </div>
-                                    ${metaHtml}
-                                </div>
-                            </div>
-                            <div class="counter-controls">
-                                <button class="btn-qty" onclick="updateQty(${item.id}, -1)">-</button>
-                                <span class="qty-display">${item.qty}</span>
-                                <button class="btn-qty" onclick="updateQty(${item.id}, 1)">+</button>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                card.innerHTML = `
-                    <div class="category-title" onclick="toggleCatIndex(${catIdx})">
-                        <span>${catName}</span>
-                        <span>${isCollapsed ? '►' : '▼'}</span>
-                    </div>
-                    <div class="item-list-container">${itemsHtml}</div>
-                `;
-                container.appendChild(card);
-            }
-        }
-
-        function renderApp() {
-            try {
-                renderFilters();
-                renderInventory();
-            } catch (err) {}
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            renderApp();
-        });
-    </script>
-
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
-    <script>
-        let inventoryRef = null;
-
-        window.addEventListener('DOMContentLoaded', () => {
-            renderApp();
-            try {
-                if (typeof firebase !== 'undefined') {
-                    const firebaseConfig = {
-                      apiKey: "AIzaSyA8hMif8Vh6ZHpCZi3M-fXF9cgErcmSOJQ",
-                      authDomain: "home-inventory-6d54b.firebaseapp.com",
-                      databaseURL: "https://home-inventory-6d54b-default-rtdb.firebaseio.com",
-                      projectId: "home-inventory-6d54b",
-                      storageBucket: "home-inventory-6d54b.firebasestorage.app",
-                      messagingSenderId: "486810614390",
-                      appId: "1:486810614390:web:9212c9141897028a9f3d57",
-                      measurementId: "G-FLZVWLP90C"
-                    };
-
-                    if (!firebase.apps.length) {
-                        firebase.initializeApp(firebaseConfig);
-                    }
-                    const db = firebase.database();
-                    inventoryRef = db.ref('inventory');
-
-                    inventoryRef.on('value', (snapshot) => {
-                        const raw = snapshot.val();
-                        if (raw) {
-                            let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
-                            if (arr.length > 0) {
-                                itemsData = arr.map(item => ({
-                                    ...item,
-                                    note: item.note || '',
-                                    price: item.price || '',
-                                    expiry: item.expiry || ''
-                                }));
-                                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
-                                renderApp();
-                                checkExpiryAlerts();
-                                document.getElementById('syncStatus').innerText = 'מסונכרן';
-                            }
-                        } else {
-                            inventoryRef.set(defaultList);
-                        }
-                    }, (err) => {
-                        document.getElementById('syncStatus').innerText = 'מקומי בלבד';
-                    });
-                }
-            } catch (err) {
-                document.getElementById('syncStatus').innerText = 'מקומי בלבד';
-            }
-        });
-
-        window.syncToCloud = function() {
-            try {
-                localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
-                if (inventoryRef) {
-                    inventoryRef.set(itemsData);
-                }
-            } catch (e) {}
-        };
-    </script>
-</body>
-</html>
+            
