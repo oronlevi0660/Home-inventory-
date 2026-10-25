@@ -221,6 +221,14 @@
             font-weight: 500;
         }
 
+        .item-expiry.expired-soon {
+            color: #c0392b;
+            font-weight: bold;
+            background-color: #fadbd8;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
         .low-stock {
             color: #e74c3c;
             font-weight: bold;
@@ -549,6 +557,31 @@
             }
         };
 
+        function checkExpiryAlerts() {
+            const today = new Date();
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+            const expiringSoonItems = itemsData.filter(item => {
+                if (!item.expiry) return false;
+                const expiryDate = new Date(item.expiry);
+                // בודקים אם התאריך עבר או חל בתוך 30 הימים הקרובים, ויש ממנו כמות גדולה מ-0
+                return expiryDate <= thirtyDaysFromNow && item.qty > 0;
+            });
+
+            // מציגים התראה פעם אחת בהפעלה אם יש מוצרים שפג תוקפם או עומדים לפוג
+            if (expiringSoonItems.length > 0) {
+                const alertKey = 'expiry_alert_shown_' + new Date().toDateString();
+                if (!sessionStorage.getItem(alertKey)) {
+                    let names = expiringSoonItems.map(i => i.name).join(', ');
+                    setTimeout(() => {
+                        alert(`⚠️ שימו לב! ישנם מוצרים שתאריך התפוגה שלהם קרוב או עבר:\n\n${names}\n\nמומלץ להשתמש בהם בהקדם!`);
+                    }, 500);
+                    sessionStorage.setItem(alertKey, 'true');
+                }
+            }
+        }
+
         function renderFilters() {
             const container = document.getElementById('categoryFiltersContainer');
             if (!container) return;
@@ -604,6 +637,10 @@
                 categories[item.category].push(item);
             });
 
+            const today = new Date();
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
+
             let catIdx = 0;
             for (const [catName, items] of Object.entries(categories)) {
                 catIdx++;
@@ -615,9 +652,17 @@
                 items.forEach(item => {
                     const isLow = item.qty <= item.minQty;
                     
+                    let isExpiringSoon = false;
+                    if (item.expiry) {
+                        const expDate = new Date(item.expiry);
+                        isExpiringSoon = expDate <= thirtyDaysFromNow;
+                    }
+                    
                     let metaParts = [];
                     if (item.price) metaParts.push(`<span class="item-price">💰 ₪${item.price}</span>`);
-                    if (item.expiry) metaParts.push(`<span class="item-expiry">⏳ תפוגה: ${item.expiry}</span>`);
+                    if (item.expiry) {
+                        metaParts.push(`<span class="item-expiry ${isExpiringSoon ? 'expired-soon' : ''}">⏳ תפוגה: ${item.expiry} ${isExpiringSoon ? '⚠️' : ''}</span>`);
+                    }
                     if (item.note) metaParts.push(`<span class="item-note">💬 ${item.note}</span>`);
                     
                     let metaHtml = metaParts.length > 0 ? `<div class="item-meta">${metaParts.join(' | ')}</div>` : '';
@@ -698,7 +743,6 @@
                         if (raw) {
                             let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
                             if (arr.length > 0) {
-                                // שומר על המלאי הקיים שלך ומוסיף את השדות החדשים בצורה בטוחה
                                 itemsData = arr.map(item => ({
                                     ...item,
                                     note: item.note || '',
@@ -707,6 +751,7 @@
                                 }));
                                 localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
                                 renderApp();
+                                checkExpiryAlerts();
                                 document.getElementById('syncStatus').innerText = 'מסונכרן';
                             }
                         } else {
