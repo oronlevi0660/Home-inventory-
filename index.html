@@ -197,10 +197,27 @@
             margin-top: 2px;
         }
 
-        .item-note {
+        .item-meta {
             font-size: 0.78rem;
-            color: #d35400;
+            color: #7f8c8d;
             margin-top: 2px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .item-note {
+            color: #d35400;
+            font-weight: 500;
+        }
+
+        .item-price {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .item-expiry {
+            color: #8e44ad;
             font-weight: 500;
         }
 
@@ -253,6 +270,8 @@
             border-radius: 12px;
             width: 100%;
             max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-content h3 {
@@ -260,13 +279,13 @@
         }
 
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .form-group label {
             display: block;
-            font-size: 0.85rem;
-            margin-bottom: 4px;
+            font-size: 0.82rem;
+            margin-bottom: 3px;
         }
 
         .form-group input, .form-group select, .form-group textarea {
@@ -277,11 +296,20 @@
             font-size: 0.9rem;
         }
 
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
         .modal-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
         .modal-right-actions {
@@ -313,7 +341,7 @@
     </header>
 
     <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 חפש מוצר..." oninput="handleSearch()">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 חפש מוצר או הערה..." oninput="handleSearch()">
     </div>
 
     <div class="category-filters" id="categoryFiltersContainer"></div>
@@ -336,17 +364,29 @@
                 <label>או הוסף קטגוריה חדשה:</label>
                 <input type="text" id="newCategoryInput" placeholder="שם קטגוריה חדשה (אופציונלי)">
             </div>
-            <div class="form-group" id="qtyGroup">
-                <label>כמות נוכחית</label>
-                <input type="number" id="itemQty" value="1" min="0">
+            <div class="form-row">
+                <div class="form-group" id="qtyGroup">
+                    <label>כמות נוכחית</label>
+                    <input type="number" id="itemQty" value="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label>כמות מינימום</label>
+                    <input type="number" id="itemMinQty" value="1" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>מחיר (₪) - אופציונלי</label>
+                    <input type="number" id="itemPrice" step="0.01" min="0" placeholder="למשל: 15.90">
+                </div>
+                <div class="form-group">
+                    <label>תאריך תפוגה - אופציונלי</label>
+                    <input type="date" id="itemExpiry">
+                </div>
             </div>
             <div class="form-group">
-                <label>כמות מינימום להתראה</label>
-                <input type="number" id="itemMinQty" value="1" min="0">
-            </div>
-            <div class="form-group">
-                <label>הערה (למשל: רבע קופסה נשארה)</label>
-                <textarea id="itemNote" rows="2" placeholder="הערה חופשית על מצב המוצר..."></textarea>
+                <label>הערה חופשית</label>
+                <textarea id="itemNote" rows="2" placeholder="למשל: רבע קופסה נשארה..."></textarea>
             </div>
             <div class="modal-actions">
                 <button class="btn-action btn-delete" id="deleteBtn" onclick="deleteItem()">מחק מוצר</button>
@@ -360,8 +400,7 @@
 
     <script>
         const defaultList = [
-            { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1, note: "" },
-            { id: 102, name: "נוזל כלים", category: "חומרי ניקוי", qty: 1, minQty: 1, note: "" }
+            { id: 101, name: "נוזל לניקוי רצפות", category: "חומרי ניקוי", qty: 1, minQty: 1, note: "", price: "", expiry: "" }
         ];
 
         let itemsData = defaultList;
@@ -403,7 +442,7 @@
 
             let text = "🛒 *רשימת קניות לבית:* \n\n";
             lowStockItems.forEach(item => {
-                text += `• ${item.name} (כמות: ${item.qty})${item.note ? ' - הערה: ' + item.note : ''}\n`;
+                text += `• ${item.name} (כמות: ${item.qty})${item.price ? ' | מחיר משוער: ₪' + item.price : ''}${item.note ? ' | ' + item.note : ''}\n`;
             });
 
             const encodedText = encodeURIComponent(text);
@@ -440,6 +479,8 @@
             document.getElementById('newCategoryInput').value = '';
             document.getElementById('itemQty').value = '1';
             document.getElementById('itemMinQty').value = '1';
+            document.getElementById('itemPrice').value = '';
+            document.getElementById('itemExpiry').value = '';
             document.getElementById('itemNote').value = '';
             document.getElementById('qtyGroup').style.display = 'block';
             document.getElementById('deleteBtn').style.display = 'none';
@@ -455,6 +496,8 @@
             document.getElementById('itemName').value = item.name;
             document.getElementById('newCategoryInput').value = '';
             document.getElementById('itemMinQty').value = item.minQty;
+            document.getElementById('itemPrice').value = item.price || '';
+            document.getElementById('itemExpiry').value = item.expiry || '';
             document.getElementById('itemNote').value = item.note || '';
             document.getElementById('qtyGroup').style.display = 'none';
             document.getElementById('deleteBtn').style.display = 'block';
@@ -470,6 +513,8 @@
             const newCatInput = document.getElementById('newCategoryInput').value.trim();
             const category = newCatInput ? newCatInput : document.getElementById('itemCategory').value;
             const minQty = parseInt(document.getElementById('itemMinQty').value) || 0;
+            const price = document.getElementById('itemPrice').value.trim();
+            const expiry = document.getElementById('itemExpiry').value;
             const note = document.getElementById('itemNote').value.trim();
 
             if (!name) return alert('נא להזין שם מוצר');
@@ -480,11 +525,13 @@
                     item.name = name;
                     item.category = category;
                     item.minQty = minQty;
+                    item.price = price;
+                    item.expiry = expiry;
                     item.note = note;
                 }
             } else {
                 const qty = parseInt(document.getElementById('itemQty').value) || 0;
-                itemsData.push({ id: Date.now(), name, category, qty, minQty, note });
+                itemsData.push({ id: Date.now(), name, category, qty, minQty, price, expiry, note });
             }
 
             renderApp();
@@ -535,7 +582,8 @@
             container.innerHTML = '';
 
             let filteredItems = itemsData.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || (item.note && item.note.toLowerCase().includes(searchQuery));
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || 
+                                      (item.note && item.note.toLowerCase().includes(searchQuery));
                 let matchesCategory = true;
                 if (selectedCategoryFilter === 'LOW_STOCK') {
                     matchesCategory = item.qty <= item.minQty;
@@ -566,6 +614,14 @@
                 let itemsHtml = '';
                 items.forEach(item => {
                     const isLow = item.qty <= item.minQty;
+                    
+                    let metaParts = [];
+                    if (item.price) metaParts.push(`<span class="item-price">💰 ₪${item.price}</span>`);
+                    if (item.expiry) metaParts.push(`<span class="item-expiry">⏳ תפוגה: ${item.expiry}</span>`);
+                    if (item.note) metaParts.push(`<span class="item-note">💬 ${item.note}</span>`);
+                    
+                    let metaHtml = metaParts.length > 0 ? `<div class="item-meta">${metaParts.join(' | ')}</div>` : '';
+
                     itemsHtml += `
                         <div class="item-row">
                             <div class="item-info">
@@ -575,7 +631,7 @@
                                     <div class="item-status ${isLow ? 'low-stock' : ''}">
                                         ${isLow ? '⚠️ מלאי נמוך!' : 'מלאי תקין'} (מינימום: ${item.minQty})
                                     </div>
-                                    ${item.note ? `<div class="item-note">💬 ${item.note}</div>` : ''}
+                                    ${metaHtml}
                                 </div>
                             </div>
                             <div class="counter-controls">
@@ -642,10 +698,12 @@
                         if (raw) {
                             let arr = Array.isArray(raw) ? raw.filter(x => x) : Object.values(raw).filter(x => x);
                             if (arr.length > 0) {
-                                // שומר על הנתונים הקיימים שלך ומעדכן מהענן בצורה חלקה
+                                // שומר על המלאי הקיים שלך ומוסיף את השדות החדשים בצורה בטוחה
                                 itemsData = arr.map(item => ({
                                     ...item,
-                                    note: item.note || ''
+                                    note: item.note || '',
+                                    price: item.price || '',
+                                    expiry: item.expiry || ''
                                 }));
                                 localStorage.setItem('home_inventory_safe_cache', JSON.stringify(itemsData));
                                 renderApp();
