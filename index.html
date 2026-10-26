@@ -14,6 +14,8 @@
         .header-actions{display:flex;gap:6px;align-items:center}
         .header-btn{background-color:#3498db;color:white;border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
         .whatsapp-btn{background-color:#25D366;color:white;border-radius:18px;padding:0 8px;width:auto;font-size:0.75rem;font-weight:bold;height:34px}
+        .backup-row{display:flex;gap:6px;margin-bottom:15px;}
+        .btn-purple{background-color:#7c3aed;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:bold;cursor:pointer;flex:1;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
         .search-container{margin-bottom:15px}
         .search-input{width:100%;padding:10px 15px;border:1px solid #ccc;border-radius:10px;font-size:0.95rem;outline:none;box-shadow:0 2px 4px rgba(0,0,0,0.03)}
         .category-filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:15px;scrollbar-width:none}
@@ -67,6 +69,14 @@
         <h1>מלאי הבית</h1>
         <span class="status-badge" id="syncStatus">מתחבר...</span>
     </header>
+
+    <!-- כפתורי גיבוי ושחזור -->
+    <div class="backup-row">
+        <button type="button" class="btn-purple" onclick="exportDataJson()">📥 גיבוי נתונים</button>
+        <button type="button" class="btn-purple" onclick="triggerImportJson()">📤 שחזור מגיבוי</button>
+        <input type="file" id="importFile" style="display:none" accept=".json" onchange="importDataJson(event)">
+    </div>
+
     <div class="search-container">
         <input type="text" id="searchInput" class="search-input" placeholder="🔍 חפש מוצר או הערה..." oninput="handleSearch()">
     </div>
@@ -144,6 +154,43 @@
             let text = "🛒 *רשימת קניות לבית:* \n\n";
             lowStockItems.forEach(item => { text += `• ${item.name} (כמות: ${item.qty})${item.price ? ' | מחיר משוער: ₪' + item.price : ''}${item.note ? ' | ' + item.note : ''}\n`; });
             window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        };
+
+        // פונקציות גיבוי ושחזור לקובץ JSON
+        window.exportDataJson = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(itemsData));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = "inventory_backup.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        };
+
+        window.triggerImportJson = function() {
+            document.getElementById('importFile').click();
+        };
+
+        window.importDataJson = function(e) {
+            if (e.target.files[0]) {
+                const reader = new FileReader();
+                reader.readAsText(e.target.files[0], "UTF-8");
+                reader.onload = (evt) => {
+                    try {
+                        const parsed = JSON.parse(evt.target.result);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            itemsData = parsed;
+                            renderApp();
+                            syncToCloud();
+                            alert("הנתונים שוחזרו בהצלחה גם לענן ולמכשיר!");
+                        } else {
+                            alert("קובץ הגיבוי אינו תקין.");
+                        }
+                    } catch (err) {
+                        alert("שגיאה בקריאת קובץ הגיבוי.");
+                    }
+                };
+            }
         };
 
         window.updateQty = function(id, delta) {
